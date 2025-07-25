@@ -1,0 +1,36 @@
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #333; line-height: 1.6; margin: 0; padding: 0; }
+.container { max-width: 1200px; margin: 0 auto; padding: 15px; }
+header { 
+    background: linear-gradient(to bottom, #f5f7fa, #e1e5e8); 
+    color: #2c3e50;
+    padding: 20px; 
+    text-align: center; 
+    border-bottom: 2px solid #bdc3c7;
+}
+footer { background-color: #34495e; color: white; text-align: center; padding: 15px; margin-top: 20px; }
+h1, h2, h3 { color: #2c3e50; }
+.card { background-color: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 20px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+.form-group { margin-bottom: 5px; }
+label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+input, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+button { display: inline-block; width: 100%; padding: 12px 20px; border: none; border-radius: 5px; color: #fff; background-color: #3498db; font-size: 16px; font-weight: bold; cursor: pointer; transition: background-color 0.3s; margin-top: 5px;}
+.button-group { display: flex; flex-direction: column; gap: 10px; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align: left; word-break: break-word; }
+th { background-color: #ecf0f1; color: #2c3e50; }
+.delete-btn { background-color: #e74c3c; width: auto; padding: 5px 10px; font-size: 14px; }
+#print-area { display: none; }
+
+@media print {
+    @page {
+        size: A4 landscape; 
+    }
+    body > *:not(#print-area), .no-print { display: none; }
+    #print-area, #print-area * { visibility: visible; }
+    #print-area { display: block; position: absolute; left: 0; top: 0; width: 100%; }
+}
+
+@media (min-width: 768px) {
+    .button-group { flex-direction: row; }
+}
