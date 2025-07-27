@@ -30,7 +30,7 @@ app.post('/api/events', async (req, res) => {
     try {
         const result = await pool.query(
             `INSERT INTO events (eventDate, eventName, eventLocation, observations, startTime, endTime, totalHours, baseFee, overtimeCost, totalValue) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
             [
                 novoEvento.eventDate, novoEvento.eventName, novoEvento.eventLocation, 
                 novoEvento.observations, novoEvento.startTime, novoEvento.endTime, 
@@ -38,12 +38,29 @@ app.post('/api/events', async (req, res) => {
                 novoEvento.totalValue
             ]
         );
-        res.status(201).json({ message: 'Evento adicionado com sucesso!', id: result.rows[0].id });
+        res.status(201).json(result.rows[0]);
     } catch (err) {
         console.error('Erro ao salvar evento:', err);
         res.status(500).json({ error: 'Erro ao salvar evento' });
     }
 });
+
+// NOVA ROTA PARA APAGAR um evento (DELETE)
+app.delete('/api/events/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM events WHERE id = $1', [id]);
+        if (result.rowCount > 0) {
+            res.status(200).json({ message: 'Evento apagado com sucesso' });
+        } else {
+            res.status(404).json({ error: 'Evento não encontrado' });
+        }
+    } catch (err) {
+        console.error(`Erro ao apagar evento ${id}:`, err);
+        res.status(500).json({ error: 'Erro ao apagar evento' });
+    }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
