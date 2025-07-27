@@ -1,36 +1,50 @@
-// server.js
-
 const express = require('express');
 const path = require('path');
+const { Pool } = require('pg');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// IMPORTANTE: Linha nova que ensina o servidor a entender JSON
-app.use(express.json());
-
-const eventosSalvos = [
-    { eventDate: '2025-07-25T00:00:00.000Z', eventName: 'Evento de Exemplo 1', eventLocation: 'Online', observations: 'Este é um evento carregado do servidor.', startTime: '10:00', endTime: '18:00', totalHours: '8.00', baseFee: '500.00', overtimeCost: '0.00', totalValue: 500.00 },
-    { eventDate: '2025-07-26T00:00:00.000Z', eventName: 'Evento de Exemplo 2', eventLocation: 'Buffet Central', observations: 'Outro evento para teste.', startTime: '09:00', endTime: '23:00', totalHours: '14.00', baseFee: '1000.00', overtimeCost: '166.67', totalValue: 1166.67 }
-];
-
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Rota para BUSCAR os eventos (GET)
-app.get('/api/events', (req, res) => {
-    res.json(eventosSalvos);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
-// NOVA ROTA PARA ADICIONAR um evento (POST)
-app.post('/api/events', (req, res) => {
-    const novoEvento = req.body; // Pega o novo evento que o navegador enviou
-    console.log('Recebido novo evento para salvar:', novoEvento);
-    
-    eventosSalvos.push(novoEvento); // Adiciona o novo evento na nossa lista em memória
-    
-    res.status(201).json({ message: 'Evento adicionado com sucesso!', evento: novoEvento });
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/api/events', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM events ORDER BY eventDate');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Erro ao buscar eventos:', err);
+        res.status(500).json({ error: 'Erro ao buscar eventos' });
+    }
+});
+
+app.post('/api/events', async (req, res) => {
+    const novoEvento = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO events (eventDate, eventName, eventLocation, observations, startTime, endTime, totalHours, baseFee, overtimeCost, totalValue) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+            [
+                novoEvento.eventDate, novoEvento.eventName, novoEvento.eventLocation, 
+                novoEvento.observations, novoEvento.startTime, novoEvento.endTime, 
+                novoEvento.totalHours, novoEvento.baseFee, novoEvento.overtimeCost, 
+                novoEvento.totalValue
+            ]
+        );
+        res.status(201).json({ message: 'Evento adicionado com sucesso!', id: result.rows[0].id });
+    } catch (err) {
+        console.error('Erro ao salvar evento:', err);
+        res.status(500).json({ error: 'Erro ao salvar evento' });
+    }
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}. Acesse em http://localhost:${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
