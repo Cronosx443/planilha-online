@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM Carregado. Configurando listeners.");
     loadUserData();
     loadEvents();
     
@@ -41,19 +42,20 @@ function loadUserData() {
 function renderTable(events) {
     const tableBody = document.getElementById('eventsTable').getElementsByTagName('tbody')[0];
     tableBody.innerHTML = ''; 
-    events.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
+    events.sort((a, b) => new Date(a.eventdate) - new Date(b.eventdate));
     events.forEach(eventData => {
         const newRow = tableBody.insertRow();
-        newRow.dataset.rawDate = new Date(eventData.eventDate).toISOString().split('T')[0];
+        const eventDateForDataset = new Date(eventData.eventdate).toISOString().split('T')[0];
+        newRow.dataset.rawDate = eventDateForDataset;
         newRow.dataset.eventData = JSON.stringify(eventData);
         newRow.innerHTML = `
             <td><input type="checkbox" class="event-checkbox"></td>
-            <td>${new Date(eventData.eventDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
-            <td>${eventData.eventName}</td>
-            <td>${eventData.eventLocation}</td>
+            <td>${new Date(eventData.eventdate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
+            <td>${eventData.eventname}</td>
+            <td>${eventData.eventlocation}</td>
             <td>${eventData.observations}</td>
-            <td><strong>R$ ${Number(eventData.totalValue).toFixed(2)}</strong></td>
-            <td class="no-print"><button class="delete-btn" onclick="deleteRow(this)">Apagar</button></td>
+            <td><strong>R$ ${Number(eventData.totalvalue).toFixed(2)}</strong></td>
+            <td class="no-print"><button class="delete-btn" onclick="deleteRow(${eventData.id})">Apagar</button></td>
         `;
     });
 }
@@ -71,6 +73,7 @@ async function loadEvents() {
 }
 
 async function addEvent() {
+    console.log("Botão 'Adicionar Evento' clicado. Iniciando função addEvent.");
     const eventDate = document.getElementById('eventDate').value;
     if (Array.from(document.querySelectorAll('#eventsTable tbody tr')).some(row => row.dataset.rawDate === eventDate)) {
         alert('Aviso: Já existe um evento registrado para esta data.');
@@ -101,6 +104,7 @@ async function addEvent() {
         startTime, endTime, totalHours: totalHours.toFixed(2), baseFee: baseFee.toFixed(2),
         overtimeCost: overtimeCost.toFixed(2), totalValue
     };
+    console.log("Enviando novo evento para o servidor:", novoEvento);
 
     try {
         const response = await fetch('/api/events', {
@@ -108,22 +112,40 @@ async function addEvent() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(novoEvento)
         });
+        console.log("Resposta do servidor recebida:", response);
         if (response.ok) {
+            console.log("Evento salvo com sucesso! Recarregando a lista.");
             document.getElementById('addEventForm').reset();
             loadEvents();
         } else {
+            const errorData = await response.json();
+            console.error("Erro do servidor:", errorData);
             alert("Ocorreu um erro ao salvar o evento no servidor.");
         }
     } catch (error) {
-        console.error("Erro de rede ao salvar evento:", error);
+        console.error("Erro de rede ao tentar salvar evento:", error);
         alert("Erro de conexão. Não foi possível salvar o evento.");
     }
 }
 
-function deleteRow(btn) {
-    if (confirm('Tem certeza que deseja apagar este evento?')) {
-        // Futuramente, esta função também precisará se comunicar com o backend para apagar o dado do banco.
-        btn.closest('tr').remove();
+async function deleteRow(id) {
+    console.log(`Tentando apagar evento com ID: ${id}`);
+    if (confirm('Tem certeza que deseja apagar este evento PERMANENTEMENTE?')) {
+        try {
+            const response = await fetch(`/api/events/${id}`, {
+                method: 'DELETE'
+            });
+            console.log('Resposta do servidor para apagar:', response);
+            if (response.ok) {
+                console.log("Evento apagado com sucesso! Recarregando a lista.");
+                loadEvents();
+            } else {
+                alert('Erro ao apagar o evento no servidor.');
+            }
+        } catch (error) {
+            console.error("Erro de rede ao tentar apagar evento:", error);
+            alert('Erro de conexão. Não foi possível apagar o evento.');
+        }
     }
 }
 
@@ -145,9 +167,9 @@ function getSelectedData() {
     let lastEventDate = null;
     selectedRows.forEach(checkbox => {
         const rowData = JSON.parse(checkbox.closest('tr').dataset.eventData);
-        totalSum += rowData.totalValue;
+        totalSum += rowData.totalvalue;
         eventsData.push(rowData);
-        const currentEventDate = new Date(rowData.eventDate);
+        const currentEventDate = new Date(rowData.eventdate);
         if (!lastEventDate || currentEventDate > lastEventDate) { lastEventDate = currentEventDate; }
     });
     return { userData, totalSum, eventsData, lastEventDate };
@@ -159,16 +181,16 @@ function handleGenerateReport() {
     const printArea = document.getElementById('print-area');
     const reportRowsHtml = data.eventsData.map(e => `
         <tr>
-            <td style="border: 1px solid #ddd; padding: 5px;">${new Date(e.eventDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
-            <td style="border: 1px solid #ddd; padding: 5px;">${e.eventName}</td>
-            <td style="border: 1px solid #ddd; padding: 5px;">${e.eventLocation}</td>
+            <td style="border: 1px solid #ddd; padding: 5px;">${new Date(e.eventdate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
+            <td style="border: 1px solid #ddd; padding: 5px;">${e.eventname}</td>
+            <td style="border: 1px solid #ddd; padding: 5px;">${e.eventlocation}</td>
             <td style="border: 1px solid #ddd; padding: 5px;">${e.observations}</td>
-            <td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${e.startTime}</td>
-            <td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${e.endTime}</td>
-            <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">${e.totalHours}h</td>
-            <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">R$ ${e.baseFee}</td>
-            <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">R$ ${e.overtimeCost}</td>
-            <td style="border: 1px solid #ddd; padding: 5px; text-align: right; font-weight: bold;">R$ ${Number(e.totalValue).toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${e.starttime}</td>
+            <td style="border: 1px solid #ddd; padding: 5px; text-align: center;">${e.endtime}</td>
+            <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">${e.totalhours}h</td>
+            <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">R$ ${e.basefee}</td>
+            <td style="border: 1px solid #ddd; padding: 5px; text-align: right;">R$ ${e.overtimecost}</td>
+            <td style="border: 1px solid #ddd; padding: 5px; text-align: right; font-weight: bold;">R$ ${Number(e.totalvalue).toFixed(2)}</td>
         </tr>`).join('');
     let paymentInfoHtml = `<p><strong>Chave PIX:</strong> ${data.userData.pix}</p>`;
     if (data.userData.bank && data.userData.agency && data.userData.account) {
@@ -223,7 +245,7 @@ function handlePrepareEmail() {
     const data = getSelectedData();
     if (!data) return;
     const eventDetailsForEmail = data.eventsData.map(e => {
-        let detail = `- ${e.eventName} (${new Date(e.eventDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}) (R$ ${e.totalValue.toFixed(2)})`;
+        let detail = `- ${e.eventname} (${new Date(e.eventdate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}) (R$ ${Number(e.totalvalue).toFixed(2)})`;
         if (e.observations && e.observations !== '-') { detail += ` | Obs: ${e.observations}`; }
         return detail;
     });
